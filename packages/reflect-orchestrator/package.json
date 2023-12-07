@@ -37,11 +37,7 @@
   "dependencies": {
     "@badrap/valita": "^0.3.0",
     "@rocicorp/rails": "^0.8.1",
-    "@rocicorp/reflect": "^0.38.202311200859",
-    "base64-js": "^1.5.1",
-    "lib0": "~0.2.88",
-    "y-protocols": "^1.0.6",
-    "yjs": "^13.6.10"
+    "@rocicorp/reflect": "^0.38.202311200859"
   },
   "devDependencies": {
     "@rocicorp/eslint-config": "^0.5.1",
