@@ -2,26 +2,24 @@
 
 ## Overview
 
-`@rocicorp/reflect-orchestrator` is a library for orchestrating the assignment of Reflect clients to rooms with 
-a max client capacity.
-
-## Features
-
-- TODO
+`@rocicorp/reflect-orchestrator` is a library for distributing clients to Reflect rooms with a max capacity.
 
 ## Getting Started
 
 ### Installation
 
-To install `@rocicorp/reflect-orchestrator`, run the following command:
-
 ```bash
-npm install @rocicorp/reflect-yjs@latest
+npm install @rocicorp/reflect-orchestrator
 ```
 
-### Running an Example
+### Running the Example
 
-To explore an example, follow these steps:
+1. **Clone this repo**
+
+   ```bash
+   git clone git@github.com:rocicorp/reflect-orchestrator.git
+   cd reflect-orchestrator
+   ```
 
 1. **Install dependencies**
 
@@ -29,19 +27,19 @@ To explore an example, follow these steps:
    npm install
    ```
 
-2. **Build the project**
+1. **Build the project**
 
    ```bash
    npm run build
    ```
 
-3. **Navigate to the example directory**
+1. **Navigate to the example directory**
 
    ```bash
    cd examples/basic
    ```
 
-4. **Start the example**
+1. **Start the example**
    ```bash
    npm run watch
    ```
