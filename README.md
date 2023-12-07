@@ -1,20 +1,19 @@
-# `@rocicorp/reflect-yjs`
+# `@rocicorp/reflect-orchestrator`
 
 ## Overview
 
-`@rocicorp/reflect-yjs` is a repository designed to demonstrate the integration of Yjs with Reflect. It provides a Reflect Yjs provider and implements awareness functionality. This repository includes examples for integrating Yjs with various editors like CodeMirror, Monaco and tiptap.
+`@rocicorp/reflect-orchestrator` is a library for orchestrating the assignment of Reflect clients to rooms with 
+a max client capacity.
 
 ## Features
 
-- **Reflect Yjs Provider**: An integration layer between Reflect and Yjs.
-- **Awareness Implementation**: Enables tracking and reflecting user presence and changes.
-- **Editor Integration Examples**: Contains practical examples for `codemirror-yjs`, `monaco-yjs`, `tiptap-yjs`.
+- TODO
 
 ## Getting Started
 
 ### Installation
 
-To install `@rocicorp/reflect-yjs`, run the following command:
+To install `@rocicorp/reflect-orchestrator`, run the following command:
 
 ```bash
 npm install @rocicorp/reflect-yjs@latest
@@ -22,7 +21,7 @@ npm install @rocicorp/reflect-yjs@latest
 
 ### Running an Example
 
-To explore an example, such as the CodeMirror integration, follow these steps:
+To explore an example, follow these steps:
 
 1. **Install dependencies**
 
@@ -39,7 +38,7 @@ To explore an example, such as the CodeMirror integration, follow these steps:
 3. **Navigate to the example directory**
 
    ```bash
-   cd examples/codemirror
+   cd examples/basic
    ```
 
 4. **Start the example**
