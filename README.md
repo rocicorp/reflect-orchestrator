@@ -9,7 +9,7 @@ https://orchestrate.reflect.net/
 # Installation
 
 ```bash
-npm install orchestrator
+npm install reflect-orchestrator
 ```
 
 # Running the Example
