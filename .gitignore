@@ -1,0 +1,14 @@
+.turbo
+node_modules
+out
+dist
+*.log
+.vscode/*
+.env
+.env*.local
+.vercel
+.next
+*.tsbuildinfo
+next-env.d.ts
+.reflect/
+**/*.tgz

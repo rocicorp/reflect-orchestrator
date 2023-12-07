@@ -1,0 +1,26 @@
+{
+  "name": "basic",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "watch": "concurrently --kill-others 'npx reflect dev --silence-startup-message' 'VITE_REFLECT_URL=http://127.0.0.1:8080/ npm run dev'"
+  },
+  "devDependencies": {
+    "@rocicorp/reflect-orchestrator": "0.0.1",
+    "@rocicorp/rails": "^0.8.1",
+    "@rocicorp/reflect": "^0.38.202311200859+8c13c9",
+    "@types/react": "^18.0.17",
+    "@types/react-dom": "^18.0.6",
+    "@vitejs/plugin-react": "^2.0.1",
+    "concurrently": "^8.2.1",
+    "nanoid": "^4.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "typescript": "^4.7.4",
+    "vite": "^3.0.7"
+  }
+}
