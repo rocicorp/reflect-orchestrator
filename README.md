@@ -1,18 +1,18 @@
-# `reflect-orchestrator`
-
-## Overview
+# Overview
 
 `reflect-orchestrator` is a library for distributing clients to Reflect rooms with a max capacity.
 
-## Getting Started
+# Demo
 
-### Installation
+https://orchestrate.reflect.net/
+
+# Installation
 
 ```bash
 npm install orchestrator
 ```
 
-### Running the Example
+# Running the Example
 
 1. **Clone this repo**
 
@@ -44,7 +44,7 @@ npm install orchestrator
    npm run watch
    ```
 
-## Publishing Your Project
+# Publishing Your Project
 
 To publish your project with Reflect and deploy the UI:
 
