@@ -8,7 +8,7 @@ import styles from './index.module.css';
 import {mutators} from './mutators.js';
 import {useCount} from './subscriptions.js';
 import {orchestrationOptions} from './orchestration-options.js';
-import {useOrchestration} from '@rocicorp/reflect-orchestrator';
+import {useOrchestration} from 'reflect-orchestrator';
 
 const userID = nanoid();
 const incrementKey = 'count';

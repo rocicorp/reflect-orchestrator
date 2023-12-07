@@ -1,4 +1,4 @@
-import {createOrchestrationMutators} from '@rocicorp/reflect-orchestrator';
+import {createOrchestrationMutators} from 'reflect-orchestrator';
 import {orchestrationOptions} from './orchestration-options.js';
 
 // This file defines our "mutators".
