@@ -1,15 +1,15 @@
-# `@rocicorp/reflect-orchestrator`
+# `reflect-orchestrator`
 
 ## Overview
 
-`@rocicorp/reflect-orchestrator` is a library for distributing clients to Reflect rooms with a max capacity.
+`reflect-orchestrator` is a library for distributing clients to Reflect rooms with a max capacity.
 
 ## Getting Started
 
 ### Installation
 
 ```bash
-npm install @rocicorp/reflect-orchestrator
+npm install orchestrator
 ```
 
 ### Running the Example
