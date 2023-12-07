@@ -1,10 +1,22 @@
-# Overview
+# Problem
 
-`reflect-orchestrator` is a library for distributing clients to Reflect rooms with a max capacity.
+Sometimes a collaborative experience goes viral and experiences more connections than a single Reflect room can handle.
+
+Overflowing users into other rooms is complex because you don't want to have to try multiple rooms in sequence, as that would dramatically slow down connection, but you also don't want a bunch of mostly empty rooms.
+
+# Solution
+
+`reflect-orchestrator` maintains a dedicated room just for the purpose of distributing users. It keeps precise track of which users are in which rooms so that it can completely fill rooms before overflowing. Only one round trip to the orchestrator is required before a user can connect to their assigned rooms.
+
+`reflect-orchestrator` handles all the ways in which a user could leave a room including tab-close, tab-switch, navigation, offline, and crashes.
 
 # Demo
 
 https://orchestrate.reflect.net/
+
+Open this URL in multiple incognito windows. Each connection is assigned a unique _client number_ between 0 and limit-1. The client number can be used to assign clients cursor colors, avatars, etc.
+
+In this demo the max clients per room is configured to 5. If more than five clients are present together, the sixth client will overflow into a new room.
 
 # Installation
 
