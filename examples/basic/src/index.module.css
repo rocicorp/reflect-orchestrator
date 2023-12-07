@@ -90,8 +90,18 @@ button:active {
   transform: scale(0.99);
 }
 
+.roomAssignmentInfo {
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.label {
+  font-weight: 700;
+  color: #fc208a;
+}
+
 .count {
-  margin: 0 0 1rem;
+  margin: 1rem 0;
   font-weight: 700;
   font-size: 2rem;
   color: #24283b;

@@ -63,8 +63,16 @@ function App() {
       <div className={styles.content}>
         {r ? (
           <>
-            <div>roomID: {roomAssignment?.roomID}</div>
-            <div>clientNumber: {roomAssignment?.clientNumber}</div>
+            <div className={styles.roomAssignmentInfo}>
+              <div>
+                <span className={styles.label}>roomID:</span>{' '}
+                {roomAssignment?.roomID}
+              </div>
+              <div>
+                <span className={styles.label}>clientNumber:</span>{' '}
+                {roomAssignment?.clientNumber}
+              </div>
+            </div>
             <div className={styles.count}>{count}</div>
             <button onClick={handleButtonClick}>Bonk</button>
             <CursorField r={r} />
