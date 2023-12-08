@@ -1,8 +1,10 @@
 # Problem
 
-Sometimes a collaborative experience goes viral and experiences more connections than a single Reflect room can handle.
+For some experiences it can be useful to limit the number of collaborators in a room.
 
-Overflowing users into other rooms is complex because you don't want to have to try multiple rooms in sequence, as that would dramatically slow down connection, but you also don't want a bunch of mostly empty rooms.
+Imagine a board game that has a limit of six players. If a seventh player tries to join, they should be put into a separate room. If a player leaves, the next player should take the empty spot.
+
+Overflowing users into other rooms is complex because you don't want to have to try multiple rooms in sequence, as that would dramatically slow down connection. But you also don't want a bunch of mostly empty rooms.
 
 # Solution
 
