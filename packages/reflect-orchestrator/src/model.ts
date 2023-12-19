@@ -5,7 +5,7 @@ import {OrchestrationOptions} from './options.js';
 
 export type RoomAssignment = {
   roomID: string;
-  clientNumber: number;
+  userNumber: number;
 };
 
 const roomIndexToRoomID = (index: number) =>
@@ -13,79 +13,80 @@ const roomIndexToRoomID = (index: number) =>
 
 const roomSchema = v.object({
   id: v.string(),
-  clientNumbers: v.array(v.number()),
+  userNumbers: v.array(v.number()),
 });
 
-export const clientRoomAssignmentSchema = v.object({
+export const userRoomAssignmentSchema = v.object({
   id: v.string(),
-  // foreign key to a roomModelSchema
+  // foreign key to a roomSchema
   roomID: v.string(),
+  clientIDs: v.array(v.string()),
   aliveTimestamp: v.number(),
-  clientNumber: v.number(),
+  userNumber: v.number(),
 });
 
-const clientRoomAssignmentMetaSchema = v.object({
+const userRoomAssignmentMetaSchema = v.object({
   lastGCTimestamp: v.number(),
 });
 
 // Export generated interface.
-export type ClientRoomAssignment = v.Infer<typeof clientRoomAssignmentSchema>;
-type ClientRoomAssignmentMeta = v.Infer<typeof clientRoomAssignmentMetaSchema>;
+export type UserRoomAssignment = v.Infer<typeof userRoomAssignmentSchema>;
+type UserRoomAssignmentMeta = v.Infer<typeof userRoomAssignmentMetaSchema>;
 
-const {get: getRoom, put: putRoom} = generate(
+const {get: getRoom, set: setRoom} = generate(
   'room',
   roomSchema.parse.bind(roomSchema),
 );
 
 const {
-  get: getClientRoomAssignmentInternal,
-  put: putClientRoomAssignment,
-  update: updateClientRoomAssignment,
-  delete: deleteClientRoomAssignment,
-  list: listClientRoomAssignments,
+  get: getUserRoomAssignmentInternal,
+  set: setUserRoomAssignment,
+  update: updateUserRoomAssignment,
+  delete: deleteUserRoomAssignment,
+  list: listUserRoomAssignments,
 } = generate(
-  'clientToRoom',
-  clientRoomAssignmentSchema.parse.bind(clientRoomAssignmentSchema),
+  'userToRoom',
+  userRoomAssignmentSchema.parse.bind(userRoomAssignmentSchema),
 );
 
-export const getClientRoomAssignment = getClientRoomAssignmentInternal;
+export const getUserRoomAssignment = getUserRoomAssignmentInternal;
 
-const clientRoomAssignmentMetaKey = 'clientToRoomMeta';
-async function getClientRoomAssignmentMeta(
+const userRoomAssignmentMetaKey = 'userToRoomMeta';
+async function getUserRoomAssignmentMeta(
   tx: ReadTransaction,
-): Promise<ClientRoomAssignmentMeta | undefined> {
-  const meta = await tx.get(clientRoomAssignmentMetaKey);
+): Promise<UserRoomAssignmentMeta | undefined> {
+  const meta = await tx.get(userRoomAssignmentMetaKey);
   if (meta === undefined) {
     return meta;
   }
-  return clientRoomAssignmentMetaSchema.parse(meta);
+  return userRoomAssignmentMetaSchema.parse(meta);
 }
 
-async function putClientRoomAssignmentMeta(
+async function setUserRoomAssignmentMeta(
   tx: WriteTransaction,
-  meta: ClientRoomAssignmentMeta,
+  meta: UserRoomAssignmentMeta,
 ) {
-  await tx.set(clientRoomAssignmentMetaKey, meta);
+  await tx.set(userRoomAssignmentMetaKey, meta);
 }
 
-async function removeClientsFromRoom(
+async function removeUsersFromRoom(
   tx: WriteTransaction,
   roomID: string,
-  removeClientNumbers: number[],
+  removeUserNumbers: number[],
 ) {
   const room = await getRoom(tx, roomID);
   if (!room) {
     return;
   }
-  const updatedClientNumbers = [];
-  for (const clientNumber of room.clientNumbers) {
-    if (removeClientNumbers.indexOf(clientNumber) === -1) {
-      updatedClientNumbers.push(clientNumber);
+  const updatedUserNumbers = [];
+  for (const userNumber of room.userNumbers) {
+    if (removeUserNumbers.indexOf(userNumber) === -1) {
+      updatedUserNumbers.push(userNumber);
     }
   }
-  await putRoom(tx, {
+  await setRoom(tx, {
     id: roomID,
-    clientNumbers: updatedClientNumbers,
+    userNumbers: updatedUserNumbers,
   });
 }
 
@@ -93,18 +94,34 @@ async function unload(tx: WriteTransaction) {
   if (tx.location !== 'server') {
     return;
   }
-  const assignment = await getClientRoomAssignment(tx, tx.clientID);
+  if (tx.auth === undefined) {
+    throw new Error('Unexpected missing transaction auth.');
+  }
+
+  const assignment = await getUserRoomAssignment(tx, tx.auth.userID);
   if (assignment !== undefined) {
-    await Promise.all([
-      await removeClientsFromRoom(tx, assignment.roomID, [
-        assignment.clientNumber,
-      ]),
-      await deleteClientRoomAssignment(tx, assignment.id),
-    ]);
+    if (
+      assignment.clientIDs.length === 1 &&
+      assignment.clientIDs[0] === tx.clientID
+    ) {
+      await Promise.all([
+        await removeUsersFromRoom(tx, assignment.roomID, [
+          assignment.userNumber,
+        ]),
+        await deleteUserRoomAssignment(tx, assignment.id),
+      ]);
+    } else if (assignment.clientIDs.indexOf(tx.clientID) !== -1) {
+      const updatedClientIDs = [...assignment.clientIDs];
+      updatedClientIDs.splice(assignment.clientIDs.indexOf(tx.clientID), 1);
+      await updateUserRoomAssignment(tx, {
+        ...assignment,
+        clientIDs: updatedClientIDs,
+      });
+    }
   }
 }
 
-function getFirstUnusedClientNumber(used: number[]): number {
+function getFirstUnusedUserNumber(used: number[]): number {
   let unused = undefined;
   for (let i = 0; unused === undefined; i++) {
     if (used.indexOf(i) === -1) {
@@ -122,48 +139,53 @@ export type OrchestrationMutators = {
 export function createOrchestrationMutators(
   options: OrchestrationOptions,
 ): OrchestrationMutators {
-  const {maxClientsPerRoom, roomAssignmentTimeoutMs = 30_000} = options;
+  const {maxUsersPerRoom, roomAssignmentTimeoutMs = 30_000} = options;
   async function alive(tx: WriteTransaction) {
     if (tx.location !== 'server') {
       return;
     }
+    if (tx.auth === undefined) {
+      throw new Error('Unexpected missing transaction auth.');
+    }
 
     const now = Date.now();
-    const clientRoomAssignmentMeta = await getClientRoomAssignmentMeta(tx);
+    const clientRoomAssignmentMeta = await getUserRoomAssignmentMeta(tx);
     if (
       clientRoomAssignmentMeta === undefined ||
       now - clientRoomAssignmentMeta.lastGCTimestamp >
         roomAssignmentTimeoutMs * 3
     ) {
-      await putClientRoomAssignmentMeta(tx, {lastGCTimestamp: now});
+      await setUserRoomAssignmentMeta(tx, {lastGCTimestamp: now});
       // GC room assignments
-      const assignments = await listClientRoomAssignments(tx);
+      const assignments = await listUserRoomAssignments(tx);
       const toDelete = [];
-      const removeClientNumbers = new Map();
+      const removeUserNumbers = new Map();
       for (const assignment of assignments) {
         if (now - assignment.aliveTimestamp > roomAssignmentTimeoutMs) {
           toDelete.push(assignment);
-          removeClientNumbers.set(assignment.roomID, [
-            ...(removeClientNumbers.get(assignment.roomID) ?? []),
-            assignment.clientNumber,
+          removeUserNumbers.set(assignment.roomID, [
+            ...(removeUserNumbers.get(assignment.roomID) ?? []),
+            assignment.userNumber,
           ]);
         }
       }
       await Promise.all(
-        toDelete.map(assignment =>
-          deleteClientRoomAssignment(tx, assignment.id),
-        ),
+        toDelete.map(assignment => deleteUserRoomAssignment(tx, assignment.id)),
       );
       await Promise.all(
-        [...removeClientNumbers.entries()].map(async ([roomID, change]) => {
-          await removeClientsFromRoom(tx, roomID, change);
+        [...removeUserNumbers.entries()].map(async ([roomID, change]) => {
+          await removeUsersFromRoom(tx, roomID, change);
         }),
       );
     }
-    const clientRoomAssignment = await getClientRoomAssignment(tx, tx.clientID);
-    if (clientRoomAssignment !== undefined) {
-      await updateClientRoomAssignment(tx, {
-        id: clientRoomAssignment.id,
+    const userRoomAssignment = await getUserRoomAssignment(tx, tx.auth.userID);
+    if (userRoomAssignment !== undefined) {
+      await updateUserRoomAssignment(tx, {
+        id: userRoomAssignment.id,
+        clientIDs:
+          userRoomAssignment.clientIDs.indexOf(tx.clientID) === -1
+            ? [...userRoomAssignment.clientIDs, tx.clientID]
+            : userRoomAssignment.clientIDs,
         aliveTimestamp: now,
       });
       return;
@@ -173,19 +195,20 @@ export function createOrchestrationMutators(
       const roomID = roomIndexToRoomID(roomIndex);
       const room = (await getRoom(tx, roomID)) ?? {
         id: roomID,
-        clientNumbers: [],
+        userNumbers: [],
       };
-      if (room.clientNumbers.length < maxClientsPerRoom) {
-        const clientNumber = getFirstUnusedClientNumber(room.clientNumbers);
-        await putRoom(tx, {
+      if (room.userNumbers.length < maxUsersPerRoom) {
+        const userNumber = getFirstUnusedUserNumber(room.userNumbers);
+        await setRoom(tx, {
           id: roomID,
-          clientNumbers: [...room.clientNumbers, clientNumber],
+          userNumbers: [...room.userNumbers, userNumber],
         });
-        await putClientRoomAssignment(tx, {
-          id: tx.clientID,
+        await setUserRoomAssignment(tx, {
+          id: tx.auth.userID,
           roomID,
+          clientIDs: [tx.clientID],
           aliveTimestamp: now,
-          clientNumber,
+          userNumber,
         });
         roomAssigned = true;
       }

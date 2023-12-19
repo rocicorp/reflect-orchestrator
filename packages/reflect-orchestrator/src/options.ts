@@ -1,8 +1,8 @@
 export type OrchestrationOptions = {
   /**
-   * The maximum number of clients that can be assigned to a room at one time.
+   * The maximum number of users that can be assigned to a room at one time.
    */
-  maxClientsPerRoom: number;
+  maxUsersPerRoom: number;
 
   /**
    * The amount of time a client can be disconnected before losing
