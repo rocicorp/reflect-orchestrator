@@ -1,14 +1,5 @@
 export type OrchestrationOptions = {
   /**
-   * The maximum number of assignments a room can have at one time.
-   *
-   * When assignBy is 'client', each client counts as its own assignment,
-   * when assignBy is 'user', all clients for the same userID count as a
-   * single assignment.
-   */
-  maxPerRoom: number;
-
-  /**
    * Whether assignments should be made by client or user. (i.e. all
    * clients for the same userID should have the same room assignment).
    *
@@ -16,6 +7,15 @@ export type OrchestrationOptions = {
    * Authentication (see https://hello.reflect.net/how/auth).
    */
   assignBy: 'client' | 'user';
+
+  /**
+   * The maximum number of assignments a room can have at one time.
+   *
+   * When assignBy is 'client', each client counts as its own assignment,
+   * when assignBy is 'user', all clients for the same userID count as a
+   * single assignment.
+   */
+  maxPerRoom: number;
 
   /**
    * The amount of time a client/user can be disconnected before losing
