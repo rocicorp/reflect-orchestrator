@@ -43,7 +43,7 @@ function App() {
       auth: userID,
       mutators,
     });
-    const userInfo = getUserInfo(roomAssignment.userNumber);
+    const userInfo = getUserInfo(roomAssignment.assignmentNumber);
     void reflect.mutate.initClientState(userInfo);
     setR(reflect);
     return () => {
@@ -71,7 +71,7 @@ function App() {
               </div>
               <div>
                 <span className={styles.label}>userNumber:</span>{' '}
-                {roomAssignment?.userNumber}
+                {roomAssignment?.assignmentNumber}
               </div>
             </div>
             <div className={styles.count}>{count}</div>

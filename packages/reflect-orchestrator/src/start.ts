@@ -1,19 +1,16 @@
 import {Reflect, ReflectOptions} from '@rocicorp/reflect/client';
 import {OrchestrationOptions} from './options.js';
-import {createOrchestrationMutators, getUserRoomAssignment} from './model.js';
+import {
+  RoomAssignment,
+  createOrchestrationMutators,
+  getRoomAssignmentInfo,
+} from './model.js';
 import {MutatorDefs} from '@rocicorp/reflect';
 
 export function startOrchestration(
   reflectOptions: Omit<ReflectOptions<MutatorDefs>, 'mutators'>,
   orchestrationOptions: OrchestrationOptions,
-  onRoomAssignmentChange: (
-    assignment:
-      | {
-          roomID: string;
-          userNumber: number;
-        }
-      | undefined,
-  ) => void,
+  onRoomAssignmentChange: (assignment: RoomAssignment | undefined) => void,
 ) {
   const orchestratorR = new Reflect({
     ...reflectOptions,
@@ -24,16 +21,18 @@ export function startOrchestration(
 
   orchestratorR.subscribe(
     async tx => {
-      const userRoomAssignment = await getUserRoomAssignment(
+      const roomAssignmentInfo = await getRoomAssignmentInfo(
         tx,
-        orchestratorR.userID,
+        orchestrationOptions.assignBy === 'user'
+          ? orchestratorR.userID
+          : orchestratorR.clientID,
       );
-      if (!userRoomAssignment) {
+      if (!roomAssignmentInfo) {
         return undefined;
       }
       return {
-        roomID: userRoomAssignment.roomID,
-        userNumber: userRoomAssignment.userNumber,
+        roomID: roomAssignmentInfo.roomID,
+        assignmentNumber: roomAssignmentInfo.assignmentNumber,
       };
     },
     {
