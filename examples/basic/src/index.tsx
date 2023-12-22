@@ -70,7 +70,7 @@ function App() {
                 {roomAssignment?.roomID}
               </div>
               <div>
-                <span className={styles.label}>userNumber:</span>{' '}
+                <span className={styles.label}>assignmentNumber:</span>{' '}
                 {roomAssignment?.assignmentNumber}
               </div>
             </div>

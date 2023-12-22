@@ -25,5 +25,5 @@ export type OrchestrationOptions = {
    *
    * Defaults to 30 seconds.
    */
-  roomAssignmentTimeoutMs?: number;
+  assignmentTimeoutMs?: number;
 };

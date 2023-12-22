@@ -8,6 +8,11 @@ export type RoomAssignment = {
   assignmentNumber: number;
 };
 
+const SCHEMA_VERSION = 'v1';
+function makeKeyPrefix(prefix: string): string {
+  return `reflect-orchestrator/${SCHEMA_VERSION}/${prefix}`;
+}
+
 const roomIndexToRoomID = (index: number) =>
   `orchestrator-assigned-${index.toString(10).padStart(10, '0')}`;
 
@@ -36,7 +41,7 @@ export type RoomAssignmentInfo = v.Infer<typeof roomAssignmentInfoSchema>;
 type RoomAssignmentsMeta = v.Infer<typeof roomAssignmentsMetaSchema>;
 
 const {get: getRoom, set: setRoom} = generate(
-  'room',
+  makeKeyPrefix('room'),
   roomSchema.parse.bind(roomSchema),
 );
 
@@ -47,13 +52,13 @@ const {
   delete: deleteRoomAssignment,
   list: listRoomAssignments,
 } = generate(
-  'roomAssignment',
+  makeKeyPrefix('roomAssignment'),
   roomAssignmentInfoSchema.parse.bind(roomAssignmentInfoSchema),
 );
 
 export const getRoomAssignmentInfo = getRoomAssignmentInternal;
 
-const roomAssignmentMetaKey = 'roomAssignmentsMeta';
+const roomAssignmentMetaKey = makeKeyPrefix('roomAssignmentsMeta');
 async function getRoomAssignmentsMeta(
   tx: ReadTransaction,
 ): Promise<RoomAssignmentsMeta | undefined> {
@@ -110,7 +115,7 @@ export type OrchestrationMutators = {
 export function createOrchestrationMutators(
   options: OrchestrationOptions,
 ): OrchestrationMutators {
-  const {maxPerRoom, roomAssignmentTimeoutMs = 30_000} = options;
+  const {maxPerRoom, assignmentTimeoutMs = 30_000} = options;
   async function alive(tx: WriteTransaction) {
     if (tx.location !== 'server') {
       return;
@@ -120,8 +125,7 @@ export function createOrchestrationMutators(
     const clientRoomAssignmentMeta = await getRoomAssignmentsMeta(tx);
     if (
       clientRoomAssignmentMeta === undefined ||
-      now - clientRoomAssignmentMeta.lastGCTimestamp >
-        roomAssignmentTimeoutMs * 3
+      now - clientRoomAssignmentMeta.lastGCTimestamp > assignmentTimeoutMs * 3
     ) {
       await setRoomAssignmentMeta(tx, {lastGCTimestamp: now});
       // GC room assignments
@@ -129,7 +133,7 @@ export function createOrchestrationMutators(
       const toDelete = [];
       const removeAssignmentNumbers = new Map();
       for (const assignment of assignments) {
-        if (now - assignment.aliveTimestamp > roomAssignmentTimeoutMs) {
+        if (now - assignment.aliveTimestamp > assignmentTimeoutMs) {
           toDelete.push(assignment);
           removeAssignmentNumbers.set(assignment.roomID, [
             ...(removeAssignmentNumbers.get(assignment.roomID) ?? []),

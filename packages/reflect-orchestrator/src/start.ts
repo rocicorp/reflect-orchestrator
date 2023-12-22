@@ -20,6 +20,13 @@ export function startOrchestration(
   });
 
   orchestratorR.subscribe(
+    tx => tx.scan().entries().toArray(),
+    r => {
+      console.log(JSON.stringify(r, undefined, 2));
+    },
+  );
+
+  orchestratorR.subscribe(
     async tx => {
       const roomAssignmentInfo = await getRoomAssignmentInfo(
         tx,
