@@ -1,16 +1,29 @@
 export type OrchestrationOptions = {
   /**
-   * The maximum number of clients that can be assigned to a room at one time.
+   * Whether assignments should be made by client or user. (i.e. all
+   * clients for the same userID should have the same room assignment).
+   *
+   * assignBy 'user' requires an `authHandler` to be configured for
+   * Authentication (see https://hello.reflect.net/how/auth).
    */
-  maxClientsPerRoom: number;
+  assignBy: 'client' | 'user';
 
   /**
-   * The amount of time a client can be disconnected before losing
-   * its assignment to the room (if the client reconnects after a long time,
-   * for example a user switches back to a long backgrounded tab, the client
+   * The maximum number of assignments a room can have at one time.
+   *
+   * When assignBy is 'client', each client counts as its own assignment,
+   * when assignBy is 'user', all clients for the same userID count as a
+   * single assignment.
+   */
+  maxPerRoom: number;
+
+  /**
+   * The amount of time a client/user can be disconnected before losing
+   * their assignment to the room (if they reconnect after a long
+   * time, for example a user switches back to a long backgrounded tab, they
    * will be reassigned a room, which may be a different room).
    *
    * Defaults to 30 seconds.
    */
-  roomAssignmentTimeoutMs?: number;
+  assignmentTimeoutMs?: number;
 };

@@ -1,5 +1,6 @@
 import type {OrchestrationOptions} from 'reflect-orchestrator';
 
 export const orchestrationOptions: OrchestrationOptions = {
-  maxClientsPerRoom: 5,
+  maxPerRoom: 5,
+  assignBy: 'user',
 };

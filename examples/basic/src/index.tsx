@@ -10,7 +10,8 @@ import {useCount} from './subscriptions.js';
 import {orchestrationOptions} from './orchestration-options.js';
 import {useOrchestration} from 'reflect-orchestrator';
 
-const userID = nanoid();
+const url = new URL(location.href);
+const userID = url.searchParams.get('userID') ?? nanoid();
 const incrementKey = 'count';
 
 const server: string | undefined = import.meta.env.VITE_REFLECT_URL;
@@ -42,7 +43,7 @@ function App() {
       auth: userID,
       mutators,
     });
-    const userInfo = getUserInfo(roomAssignment.clientNumber);
+    const userInfo = getUserInfo(roomAssignment.assignmentNumber);
     void reflect.mutate.initClientState(userInfo);
     setR(reflect);
     return () => {
@@ -69,8 +70,8 @@ function App() {
                 {roomAssignment?.roomID}
               </div>
               <div>
-                <span className={styles.label}>clientNumber:</span>{' '}
-                {roomAssignment?.clientNumber}
+                <span className={styles.label}>assignmentNumber:</span>{' '}
+                {roomAssignment?.assignmentNumber}
               </div>
             </div>
             <div className={styles.count}>{count}</div>

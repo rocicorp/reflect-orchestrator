@@ -5,106 +5,99 @@ import {OrchestrationOptions} from './options.js';
 
 export type RoomAssignment = {
   roomID: string;
-  clientNumber: number;
+  assignmentNumber: number;
 };
+
+const SCHEMA_VERSION = 'v1';
+function makeKeyPrefix(prefix: string): string {
+  return `reflect-orchestrator/${SCHEMA_VERSION}/${prefix}`;
+}
 
 const roomIndexToRoomID = (index: number) =>
   `orchestrator-assigned-${index.toString(10).padStart(10, '0')}`;
 
 const roomSchema = v.object({
   id: v.string(),
-  clientNumbers: v.array(v.number()),
+  assignmentNumbers: v.array(v.number()),
 });
 
-export const clientRoomAssignmentSchema = v.object({
+export const roomAssignmentInfoSchema = v.object({
+  // clientID if assignBy 'client', userID if assignBy 'user'
   id: v.string(),
-  // foreign key to a roomModelSchema
+  // foreign key to a roomSchema
   roomID: v.string(),
+  // length 0-1 if assignBy 'client', length >= 0 if assignBy 'user'
+  clientIDs: v.array(v.string()),
   aliveTimestamp: v.number(),
-  clientNumber: v.number(),
+  assignmentNumber: v.number(),
 });
 
-const clientRoomAssignmentMetaSchema = v.object({
+const roomAssignmentsMetaSchema = v.object({
   lastGCTimestamp: v.number(),
 });
 
 // Export generated interface.
-export type ClientRoomAssignment = v.Infer<typeof clientRoomAssignmentSchema>;
-type ClientRoomAssignmentMeta = v.Infer<typeof clientRoomAssignmentMetaSchema>;
+export type RoomAssignmentInfo = v.Infer<typeof roomAssignmentInfoSchema>;
+type RoomAssignmentsMeta = v.Infer<typeof roomAssignmentsMetaSchema>;
 
-const {get: getRoom, put: putRoom} = generate(
-  'room',
+const {get: getRoom, set: setRoom} = generate(
+  makeKeyPrefix('room'),
   roomSchema.parse.bind(roomSchema),
 );
 
 const {
-  get: getClientRoomAssignmentInternal,
-  put: putClientRoomAssignment,
-  update: updateClientRoomAssignment,
-  delete: deleteClientRoomAssignment,
-  list: listClientRoomAssignments,
+  get: getRoomAssignmentInternal,
+  set: setRoomAssignment,
+  update: updateRoomAssignment,
+  delete: deleteRoomAssignment,
+  list: listRoomAssignments,
 } = generate(
-  'clientToRoom',
-  clientRoomAssignmentSchema.parse.bind(clientRoomAssignmentSchema),
+  makeKeyPrefix('roomAssignment'),
+  roomAssignmentInfoSchema.parse.bind(roomAssignmentInfoSchema),
 );
 
-export const getClientRoomAssignment = getClientRoomAssignmentInternal;
+export const getRoomAssignmentInfo = getRoomAssignmentInternal;
 
-const clientRoomAssignmentMetaKey = 'clientToRoomMeta';
-async function getClientRoomAssignmentMeta(
+const roomAssignmentMetaKey = makeKeyPrefix('roomAssignmentsMeta');
+async function getRoomAssignmentsMeta(
   tx: ReadTransaction,
-): Promise<ClientRoomAssignmentMeta | undefined> {
-  const meta = await tx.get(clientRoomAssignmentMetaKey);
+): Promise<RoomAssignmentsMeta | undefined> {
+  const meta = await tx.get(roomAssignmentMetaKey);
   if (meta === undefined) {
     return meta;
   }
-  return clientRoomAssignmentMetaSchema.parse(meta);
+  return roomAssignmentsMetaSchema.parse(meta);
 }
 
-async function putClientRoomAssignmentMeta(
+async function setRoomAssignmentMeta(
   tx: WriteTransaction,
-  meta: ClientRoomAssignmentMeta,
+  meta: RoomAssignmentsMeta,
 ) {
-  await tx.set(clientRoomAssignmentMetaKey, meta);
+  await tx.set(roomAssignmentMetaKey, meta);
 }
 
-async function removeClientsFromRoom(
+async function removeAssignmentsFromRoom(
   tx: WriteTransaction,
   roomID: string,
-  removeClientNumbers: number[],
+  removeAssignmentNumbers: number[],
 ) {
   const room = await getRoom(tx, roomID);
   if (!room) {
     return;
   }
-  const updatedClientNumbers = [];
-  for (const clientNumber of room.clientNumbers) {
-    if (removeClientNumbers.indexOf(clientNumber) === -1) {
-      updatedClientNumbers.push(clientNumber);
+  const assignmentNumbers = [];
+  for (const assignmentNumber of room.assignmentNumbers) {
+    if (removeAssignmentNumbers.indexOf(assignmentNumber) === -1) {
+      assignmentNumbers.push(assignmentNumber);
     }
   }
-  await putRoom(tx, {
+  await setRoom(tx, {
     id: roomID,
-    clientNumbers: updatedClientNumbers,
+    assignmentNumbers,
   });
 }
 
-async function unload(tx: WriteTransaction) {
-  if (tx.location !== 'server') {
-    return;
-  }
-  const assignment = await getClientRoomAssignment(tx, tx.clientID);
-  if (assignment !== undefined) {
-    await Promise.all([
-      await removeClientsFromRoom(tx, assignment.roomID, [
-        assignment.clientNumber,
-      ]),
-      await deleteClientRoomAssignment(tx, assignment.id),
-    ]);
-  }
-}
-
-function getFirstUnusedClientNumber(used: number[]): number {
+function getFirstUnusedAssignmentNumber(used: number[]): number {
   let unused = undefined;
   for (let i = 0; unused === undefined; i++) {
     if (used.indexOf(i) === -1) {
@@ -122,48 +115,49 @@ export type OrchestrationMutators = {
 export function createOrchestrationMutators(
   options: OrchestrationOptions,
 ): OrchestrationMutators {
-  const {maxClientsPerRoom, roomAssignmentTimeoutMs = 30_000} = options;
+  const {maxPerRoom, assignmentTimeoutMs = 30_000} = options;
   async function alive(tx: WriteTransaction) {
     if (tx.location !== 'server') {
       return;
     }
-
+    const id = getIdForAssignment(tx, options);
     const now = Date.now();
-    const clientRoomAssignmentMeta = await getClientRoomAssignmentMeta(tx);
+    const clientRoomAssignmentMeta = await getRoomAssignmentsMeta(tx);
     if (
       clientRoomAssignmentMeta === undefined ||
-      now - clientRoomAssignmentMeta.lastGCTimestamp >
-        roomAssignmentTimeoutMs * 3
+      now - clientRoomAssignmentMeta.lastGCTimestamp > assignmentTimeoutMs * 3
     ) {
-      await putClientRoomAssignmentMeta(tx, {lastGCTimestamp: now});
+      await setRoomAssignmentMeta(tx, {lastGCTimestamp: now});
       // GC room assignments
-      const assignments = await listClientRoomAssignments(tx);
+      const assignments = await listRoomAssignments(tx);
       const toDelete = [];
-      const removeClientNumbers = new Map();
+      const removeAssignmentNumbers = new Map();
       for (const assignment of assignments) {
-        if (now - assignment.aliveTimestamp > roomAssignmentTimeoutMs) {
+        if (now - assignment.aliveTimestamp > assignmentTimeoutMs) {
           toDelete.push(assignment);
-          removeClientNumbers.set(assignment.roomID, [
-            ...(removeClientNumbers.get(assignment.roomID) ?? []),
-            assignment.clientNumber,
+          removeAssignmentNumbers.set(assignment.roomID, [
+            ...(removeAssignmentNumbers.get(assignment.roomID) ?? []),
+            assignment.assignmentNumber,
           ]);
         }
       }
       await Promise.all(
-        toDelete.map(assignment =>
-          deleteClientRoomAssignment(tx, assignment.id),
-        ),
+        toDelete.map(assignment => deleteRoomAssignment(tx, assignment.id)),
       );
       await Promise.all(
-        [...removeClientNumbers.entries()].map(async ([roomID, change]) => {
-          await removeClientsFromRoom(tx, roomID, change);
+        [...removeAssignmentNumbers.entries()].map(async ([roomID, change]) => {
+          await removeAssignmentsFromRoom(tx, roomID, change);
         }),
       );
     }
-    const clientRoomAssignment = await getClientRoomAssignment(tx, tx.clientID);
-    if (clientRoomAssignment !== undefined) {
-      await updateClientRoomAssignment(tx, {
-        id: clientRoomAssignment.id,
+    const roomAssignment = await getRoomAssignmentInfo(tx, id);
+    if (roomAssignment !== undefined) {
+      await updateRoomAssignment(tx, {
+        id: roomAssignment.id,
+        clientIDs:
+          roomAssignment.clientIDs.indexOf(tx.clientID) === -1
+            ? [...roomAssignment.clientIDs, tx.clientID]
+            : roomAssignment.clientIDs,
         aliveTimestamp: now,
       });
       return;
@@ -173,21 +167,52 @@ export function createOrchestrationMutators(
       const roomID = roomIndexToRoomID(roomIndex);
       const room = (await getRoom(tx, roomID)) ?? {
         id: roomID,
-        clientNumbers: [],
+        assignmentNumbers: [],
       };
-      if (room.clientNumbers.length < maxClientsPerRoom) {
-        const clientNumber = getFirstUnusedClientNumber(room.clientNumbers);
-        await putRoom(tx, {
+      if (room.assignmentNumbers.length < maxPerRoom) {
+        const assignmentNumber = getFirstUnusedAssignmentNumber(
+          room.assignmentNumbers,
+        );
+        await setRoom(tx, {
           id: roomID,
-          clientNumbers: [...room.clientNumbers, clientNumber],
+          assignmentNumbers: [...room.assignmentNumbers, assignmentNumber],
         });
-        await putClientRoomAssignment(tx, {
-          id: tx.clientID,
+        await setRoomAssignment(tx, {
+          id,
           roomID,
+          clientIDs: [tx.clientID],
           aliveTimestamp: now,
-          clientNumber,
+          assignmentNumber,
         });
         roomAssigned = true;
+      }
+    }
+  }
+
+  async function unload(tx: WriteTransaction) {
+    if (tx.location !== 'server') {
+      return;
+    }
+    const id = getIdForAssignment(tx, options);
+    const assignment = await getRoomAssignmentInfo(tx, id);
+    if (assignment !== undefined) {
+      if (
+        assignment.clientIDs.length === 1 &&
+        assignment.clientIDs[0] === tx.clientID
+      ) {
+        await Promise.all([
+          await removeAssignmentsFromRoom(tx, assignment.roomID, [
+            assignment.assignmentNumber,
+          ]),
+          await deleteRoomAssignment(tx, assignment.id),
+        ]);
+      } else if (assignment.clientIDs.indexOf(tx.clientID) !== -1) {
+        const updatedClientIDs = [...assignment.clientIDs];
+        updatedClientIDs.splice(assignment.clientIDs.indexOf(tx.clientID), 1);
+        await updateRoomAssignment(tx, {
+          ...assignment,
+          clientIDs: updatedClientIDs,
+        });
       }
     }
   }
@@ -196,4 +221,18 @@ export function createOrchestrationMutators(
     alive,
     unload,
   };
+}
+function getIdForAssignment(
+  tx: WriteTransaction,
+  options: OrchestrationOptions,
+) {
+  if (options.assignBy === 'user') {
+    if (tx.auth === undefined) {
+      throw new Error(
+        "The use of OrchestrationOptions.assignBy 'user', requires an authHandler be configured for Authentication",
+      );
+    }
+    return tx.auth.userID;
+  }
+  return tx.clientID;
 }
