@@ -2,8 +2,7 @@ import {ReflectOptions} from '@rocicorp/reflect/client';
 import {OrchestrationOptions} from './options.js';
 import {useEffect, useState} from 'react';
 import {MutatorDefs} from '@rocicorp/reflect';
-import {startOrchestration} from './start.js';
-import {RoomAssignment} from './model.js';
+import {RoomAssignment, startOrchestration} from './start.js';
 
 export function useOrchestration(
   reflectOptions: Omit<ReflectOptions<MutatorDefs>, 'mutators'>,

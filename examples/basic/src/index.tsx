@@ -57,6 +57,10 @@ function App() {
   const handleButtonClick = () => {
     void r?.mutate.increment({key: incrementKey, delta: 1});
   };
+
+  const handleLockRoom = () => {
+    void roomAssignment?.lockRoom();
+  };
   // Render app.
   return (
     <div className={styles.container}>
@@ -73,9 +77,14 @@ function App() {
                 <span className={styles.label}>assignmentNumber:</span>{' '}
                 {roomAssignment?.assignmentNumber}
               </div>
+              <div>
+                <span className={styles.label}>roomIsLocked:</span>{' '}
+                {(!!roomAssignment?.roomIsLocked).toString()}
+              </div>
             </div>
             <div className={styles.count}>{count}</div>
             <button onClick={handleButtonClick}>Bonk</button>
+            <button onClick={handleLockRoom}>Lock Room</button>
             <CursorField r={r} />
           </>
         ) : (
