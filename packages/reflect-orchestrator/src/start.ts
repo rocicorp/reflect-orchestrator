@@ -1,5 +1,5 @@
 import {Reflect, ReflectOptions} from '@rocicorp/reflect/client';
-import {OrchestrationOptions} from './options.js';
+import {OrchestrationOptions, validateOptions} from './options.js';
 import {
   createOrchestrationMutators,
   getRoom,
@@ -27,6 +27,7 @@ export function startOrchestration(
   orchestrationOptions: OrchestrationOptions,
   onRoomAssignmentChange: (assignment: RoomAssignment | undefined) => void,
 ) {
+  validateOptions(orchestrationOptions);
   const orchestratorR = new Reflect({
     ...reflectOptions,
     mutators: {
