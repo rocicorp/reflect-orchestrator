@@ -3,22 +3,18 @@ import type {ReadTransaction, WriteTransaction} from '@rocicorp/reflect';
 import * as v from '@badrap/valita';
 import {OrchestrationOptions} from './options.js';
 
-export type RoomAssignment = {
-  roomID: string;
-  assignmentNumber: number;
-};
-
 const SCHEMA_VERSION = 'v1';
 function makeKeyPrefix(prefix: string): string {
   return `reflect-orchestrator/${SCHEMA_VERSION}/${prefix}`;
 }
 
-const roomIndexToRoomID = (index: number) =>
-  `orchestrator-assigned-${index.toString(10).padStart(10, '0')}`;
+const roomIndexToRoomID = (prefix: string, index: number) =>
+  `${prefix}-${index.toString(10).padStart(10, '0')}`;
 
 const roomSchema = v.object({
   id: v.string(),
   assignmentNumbers: v.array(v.number()),
+  isLocked: v.boolean().optional(),
 });
 
 export const roomAssignmentInfoSchema = v.object({
@@ -40,10 +36,13 @@ const roomAssignmentsMetaSchema = v.object({
 export type RoomAssignmentInfo = v.Infer<typeof roomAssignmentInfoSchema>;
 type RoomAssignmentsMeta = v.Infer<typeof roomAssignmentsMetaSchema>;
 
-const {get: getRoom, set: setRoom} = generate(
-  makeKeyPrefix('room'),
-  roomSchema.parse.bind(roomSchema),
-);
+const {
+  get: getRoomInternal,
+  set: setRoom,
+  update: updateRoom,
+} = generate(makeKeyPrefix('room'), roomSchema.parse.bind(roomSchema));
+
+export const getRoom = getRoomInternal;
 
 const {
   get: getRoomAssignmentInternal,
@@ -110,12 +109,21 @@ function getFirstUnusedAssignmentNumber(used: number[]): number {
 export type OrchestrationMutators = {
   alive: (tx: WriteTransaction) => Promise<void>;
   unload: (tx: WriteTransaction) => Promise<void>;
+  /**
+   * Server side locks room with roomID if server agrees this user/client is
+   * assigned to roomID.  No new assignments will be made to a locked room.
+   */
+  lockRoom: (tx: WriteTransaction, args: {roomID: string}) => Promise<void>;
 };
 
 export function createOrchestrationMutators(
   options: OrchestrationOptions,
 ): OrchestrationMutators {
-  const {maxPerRoom, assignmentTimeoutMs = 30_000} = options;
+  const {
+    maxPerRoom,
+    assignmentTimeoutMs = 30_000,
+    roomIDPrefix = 'orchestrator-assigned',
+  } = options;
   async function alive(tx: WriteTransaction) {
     if (tx.location !== 'server') {
       return;
@@ -164,12 +172,12 @@ export function createOrchestrationMutators(
     }
     let roomAssigned = false;
     for (let roomIndex = 0; !roomAssigned; roomIndex++) {
-      const roomID = roomIndexToRoomID(roomIndex);
+      const roomID = roomIndexToRoomID(roomIDPrefix, roomIndex);
       const room = (await getRoom(tx, roomID)) ?? {
         id: roomID,
         assignmentNumbers: [],
       };
-      if (room.assignmentNumbers.length < maxPerRoom) {
+      if (room.assignmentNumbers.length < maxPerRoom && !room.isLocked) {
         const assignmentNumber = getFirstUnusedAssignmentNumber(
           room.assignmentNumbers,
         );
@@ -217,9 +225,21 @@ export function createOrchestrationMutators(
     }
   }
 
+  async function lockRoom(tx: WriteTransaction, {roomID}: {roomID: string}) {
+    if (tx.location !== 'server') {
+      return;
+    }
+    const id = getIdForAssignment(tx, options);
+    const assignment = await getRoomAssignmentInfo(tx, id);
+    if (assignment?.roomID === roomID) {
+      await updateRoom(tx, {id: assignment.roomID, isLocked: true});
+    }
+  }
+
   return {
     alive,
     unload,
+    lockRoom,
   };
 }
 function getIdForAssignment(

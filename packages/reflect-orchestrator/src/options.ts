@@ -26,4 +26,12 @@ export type OrchestrationOptions = {
    * Defaults to 30 seconds.
    */
   assignmentTimeoutMs?: number;
+
+  /**
+   * Assigned roomIDs will have the format:
+   * `${roomIDPrefix}-${index.toString(10).padStart(10, '0')}`
+   *
+   * Defaults to 'orchestrator-assigned'.
+   */
+  roomIDPrefix?: string;
 };

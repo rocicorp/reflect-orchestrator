@@ -1,11 +1,26 @@
 import {Reflect, ReflectOptions} from '@rocicorp/reflect/client';
 import {OrchestrationOptions} from './options.js';
 import {
-  RoomAssignment,
   createOrchestrationMutators,
+  getRoom,
   getRoomAssignmentInfo,
 } from './model.js';
 import {MutatorDefs} from '@rocicorp/reflect';
+
+export type RoomAssignment = {
+  roomID: string;
+  assignmentNumber: number;
+  roomIsLocked: boolean;
+  /**
+   * Locks the assigned `roomID`.
+   * No new assignments will be made to a locked `roomID`.
+   * Locking is performed on the server and only if the server agrees this
+   * client is currently assigned to roomID.  If successful the `RoomAssignment`
+   * will be updated with a `roomIsLocked` value of `true` (`roomID` and
+   * `assignmentNumber` are not changed).
+   */
+  lockRoom: () => void;
+};
 
 export function startOrchestration(
   reflectOptions: Omit<ReflectOptions<MutatorDefs>, 'mutators'>,
@@ -20,13 +35,6 @@ export function startOrchestration(
   });
 
   orchestratorR.subscribe(
-    tx => tx.scan().entries().toArray(),
-    r => {
-      console.log(JSON.stringify(r, undefined, 2));
-    },
-  );
-
-  orchestratorR.subscribe(
     async tx => {
       const roomAssignmentInfo = await getRoomAssignmentInfo(
         tx,
@@ -37,14 +45,27 @@ export function startOrchestration(
       if (!roomAssignmentInfo) {
         return undefined;
       }
+      const room = await getRoom(tx, roomAssignmentInfo.roomID);
+      if (!room) {
+        return undefined;
+      }
       return {
         roomID: roomAssignmentInfo.roomID,
         assignmentNumber: roomAssignmentInfo.assignmentNumber,
+        roomIsLocked: room.isLocked ?? false,
       };
     },
     {
       onData: result => {
-        onRoomAssignmentChange(result);
+        onRoomAssignmentChange(
+          result === undefined
+            ? undefined
+            : {
+                ...result,
+                lockRoom: () =>
+                  orchestratorR.mutate.lockRoom({roomID: result?.roomID}),
+              },
+        );
       },
     },
   );
