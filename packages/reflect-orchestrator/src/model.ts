@@ -1,7 +1,7 @@
 import {generate} from '@rocicorp/rails';
 import type {ReadTransaction, WriteTransaction} from '@rocicorp/reflect';
 import * as v from '@badrap/valita';
-import {OrchestrationOptions} from './options.js';
+import {OrchestrationOptions, validateOptions} from './options.js';
 
 const SCHEMA_VERSION = 'v1';
 function makeKeyPrefix(prefix: string): string {
@@ -119,6 +119,7 @@ export type OrchestrationMutators = {
 export function createOrchestrationMutators(
   options: OrchestrationOptions,
 ): OrchestrationMutators {
+  validateOptions(options);
   const {
     maxPerRoom,
     assignmentTimeoutMs = 30_000,
