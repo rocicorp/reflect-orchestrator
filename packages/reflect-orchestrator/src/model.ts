@@ -90,7 +90,7 @@ async function removeAssignmentsFromRoom(
       assignmentNumbers.push(assignmentNumber);
     }
   }
-  await setRoom(tx, {
+  await updateRoom(tx, {
     id: roomID,
     assignmentNumbers,
   });
@@ -183,7 +183,7 @@ export function createOrchestrationMutators(
           room.assignmentNumbers,
         );
         await setRoom(tx, {
-          id: roomID,
+          ...room,
           assignmentNumbers: [...room.assignmentNumbers, assignmentNumber],
         });
         await setRoomAssignment(tx, {
