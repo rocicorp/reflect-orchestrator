@@ -47,10 +47,10 @@ function App() {
     void reflect.mutate.initClientState(userInfo);
     setR(reflect);
     return () => {
-      void reflect?.close();
+      void reflect.close();
       setR(undefined);
     };
-  }, [roomAssignment]);
+  }, [roomAssignment?.roomID, roomAssignment?.assignmentNumber]);
 
   const count = useCount(r, incrementKey);
 
