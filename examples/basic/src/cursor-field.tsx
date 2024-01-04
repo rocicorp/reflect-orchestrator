@@ -25,7 +25,7 @@ export default function CursorField({r}: {r: Reflect<M>}) {
     };
     window.addEventListener('mousemove', handler);
     return () => window.removeEventListener('mousemove', handler);
-  }, []);
+  }, [r]);
 
   const clientStateIDs = usePresence(r);
 
