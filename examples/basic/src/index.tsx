@@ -2,14 +2,13 @@ import {Reflect} from '@rocicorp/reflect/client';
 import {nanoid} from 'nanoid';
 import React, {useEffect, useState} from 'react';
 import ReactDOM from 'react-dom/client';
-import {getUniqueUserIDs, getUserInfo} from './client-state.js';
+import {getUserInfo} from './client-state.js';
 import CursorField from './cursor-field.js';
 import styles from './index.module.css';
 import {M, mutators} from './mutators.js';
-import {useCount} from './subscriptions.js';
+import {useCount, useUniqueUserIDs} from './subscriptions.js';
 import {orchestrationOptions} from './orchestration-options.js';
 import {useOrchestration, RoomAssignment} from 'reflect-orchestrator';
-import {useSubscribe} from '@rocicorp/reflect/react';
 
 function getUserID() {
   // We store the userID in localStorage so that it persists across page
@@ -87,7 +86,7 @@ function Content({
   roomAssignment: RoomAssignment;
 }) {
   const count = useCount(r, incrementKey);
-  const userIDs = useSubscribe(r, getUniqueUserIDs, []);
+  const userIDs = useUniqueUserIDs(r);
 
   // Once we have enough players, lock the room.
   useEffect(() => {
