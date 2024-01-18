@@ -2,16 +2,28 @@ import {Reflect} from '@rocicorp/reflect/client';
 import {nanoid} from 'nanoid';
 import React, {useEffect, useState} from 'react';
 import ReactDOM from 'react-dom/client';
-import {getUserInfo} from './client-state.js';
+import {getUniqueUserIDs, getUserInfo} from './client-state.js';
 import CursorField from './cursor-field.js';
 import styles from './index.module.css';
-import {mutators} from './mutators.js';
+import {M, mutators} from './mutators.js';
 import {useCount} from './subscriptions.js';
 import {orchestrationOptions} from './orchestration-options.js';
-import {useOrchestration} from 'reflect-orchestrator';
+import {useOrchestration, RoomAssignment} from 'reflect-orchestrator';
+import {useSubscribe} from '@rocicorp/reflect/react';
 
-const url = new URL(location.href);
-const userID = url.searchParams.get('userID') ?? nanoid();
+function getUserID() {
+  // We store the userID in localStorage so that it persists across page
+  // refreshes.
+  const userID = localStorage.getItem('userID');
+  if (userID) {
+    return userID;
+  }
+  const newUserID = nanoid();
+  localStorage.setItem('userID', newUserID);
+  return newUserID;
+}
+
+const userID = getUserID();
 const incrementKey = 'count';
 
 const server: string | undefined = import.meta.env.VITE_REFLECT_URL;
@@ -30,7 +42,7 @@ function App() {
     orchestrationOptions,
   );
 
-  const [r, setR] = useState<Reflect<typeof mutators>>();
+  const [r, setR] = useState<Reflect<M>>();
   useEffect(() => {
     if (!roomAssignment) {
       setR(undefined);
@@ -43,7 +55,7 @@ function App() {
       auth: userID,
       mutators,
     });
-    const userInfo = getUserInfo(roomAssignment.assignmentNumber);
+    const userInfo = getUserInfo(userID, roomAssignment.assignmentNumber);
     void reflect.mutate.initClientState(userInfo);
     setR(reflect);
     return () => {
@@ -52,46 +64,69 @@ function App() {
     };
   }, [roomAssignment?.roomID, roomAssignment?.assignmentNumber]);
 
-  const count = useCount(r, incrementKey);
-
-  const handleButtonClick = () => {
-    void r?.mutate.increment({key: incrementKey, delta: 1});
-  };
-
-  const handleLockRoom = () => {
-    void roomAssignment?.lockRoom();
-  };
   // Render app.
   return (
     <div className={styles.container}>
       <img className={styles.logo} src="/reflect.svg" />
       <div className={styles.content}>
-        {r ? (
-          <>
-            <div className={styles.roomAssignmentInfo}>
-              <div>
-                <span className={styles.label}>roomID:</span>{' '}
-                {roomAssignment?.roomID}
-              </div>
-              <div>
-                <span className={styles.label}>assignmentNumber:</span>{' '}
-                {roomAssignment?.assignmentNumber}
-              </div>
-              <div>
-                <span className={styles.label}>roomIsLocked:</span>{' '}
-                {(!!roomAssignment?.roomIsLocked).toString()}
-              </div>
-            </div>
-            <div className={styles.count}>{count}</div>
-            <button onClick={handleButtonClick}>Bonk</button>
-            <button onClick={handleLockRoom}>Lock Room</button>
-            <CursorField r={r} />
-          </>
-        ) : (
+        {!r || !roomAssignment ? (
           'Finding a room...'
+        ) : (
+          <Content r={r} roomAssignment={roomAssignment} />
         )}
       </div>
     </div>
+  );
+}
+
+function Content({
+  r,
+  roomAssignment,
+}: {
+  r: Reflect<M>;
+  roomAssignment: RoomAssignment;
+}) {
+  const count = useCount(r, incrementKey);
+  const userIDs = useSubscribe(r, getUniqueUserIDs, []);
+
+  // Once we have enough players, lock the room.
+  useEffect(() => {
+    if (
+      userIDs.length === orchestrationOptions.maxPerRoom &&
+      !roomAssignment.roomIsLocked
+    ) {
+      roomAssignment.lockRoom();
+    }
+  }, [userIDs.length]);
+
+  const handleButtonClick = () => {
+    void r?.mutate.increment({key: incrementKey, delta: 1});
+  };
+
+  return (
+    <>
+      <div className={styles.roomAssignmentInfo}>
+        <div>
+          <span className={styles.label}>roomID:</span> {roomAssignment?.roomID}
+        </div>
+        <div>
+          <span className={styles.label}>assignmentNumber:</span>{' '}
+          {roomAssignment?.assignmentNumber}
+        </div>
+      </div>
+      {userIDs.length < orchestrationOptions.maxPerRoom ? (
+        <>
+          <br />
+          'Waiting for player...'
+        </>
+      ) : (
+        <>
+          <div className={styles.count}>{count}</div>
+          <button onClick={handleButtonClick}>Bonk</button>
+        </>
+      )}
+      <CursorField r={r} />
+    </>
   );
 }
 
