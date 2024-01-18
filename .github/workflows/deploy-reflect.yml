@@ -20,9 +20,13 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
-      - name: npm install
+      - name: install
         run: |
           npm install
+
+      - name: build
+        run: |
+          cd packages/reflect-orchestrator && npm run build && cd -
 
       - name: publish
         env:
