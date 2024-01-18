@@ -3,10 +3,5 @@
   "templates": {
     "package.json": "package.json",
     ".env.template": ".env"
-  },
-  "apps": {
-    "default": {
-      "appID": "lqhi939z"
-    }
   }
 }
