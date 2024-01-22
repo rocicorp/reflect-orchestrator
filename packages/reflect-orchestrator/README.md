@@ -16,7 +16,7 @@ Overflowing users into other rooms is complex because you don't want to have to 
 
 https://orchestrate.reflect.net/
 
-Open this URL in multiple incognito windows. Each connection is assigned a unique _client number_ between 0 and limit-1. The client number can be used to assign clients cursor colors, avatars, etc.
+Open this URL in multiple incognito windows. Each connection is assigned a unique _assignment number_ between 0 and limit-1. The assignment number can be used to assign clients cursor colors, avatars, etc.
 
 In this demo the max clients per room is configured to 5. If more than five clients are present together, the sixth client will overflow into a new room.
 
