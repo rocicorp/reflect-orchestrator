@@ -9,20 +9,16 @@ import {mutators} from './mutators.js';
 import {useCount} from './subscriptions.js';
 import {orchestrationOptions} from './orchestration-options.js';
 import {useOrchestration} from 'reflect-orchestrator';
+import {reflectServer} from './host.js';
 
 const url = new URL(location.href);
 const userID = url.searchParams.get('userID') ?? nanoid();
 const incrementKey = 'count';
 
-const server: string | undefined = import.meta.env.VITE_REFLECT_URL;
-if (!server) {
-  throw new Error('VITE_REFLECT_URL required');
-}
-
 function App() {
   const roomAssignment = useOrchestration(
     {
-      server,
+      server: reflectServer,
       roomID: 'orchestrator',
       userID,
       auth: userID,
@@ -37,7 +33,7 @@ function App() {
       return;
     }
     const reflect = new Reflect({
-      server,
+      server: reflectServer,
       roomID: roomAssignment.roomID,
       userID,
       auth: userID,

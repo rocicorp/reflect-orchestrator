@@ -3,9 +3,9 @@
 // @rocicorp/rails helper library.
 
 import type {WriteTransaction} from '@rocicorp/reflect';
-import {Entity, generate} from '@rocicorp/rails';
+import {PresenceEntity, generatePresence} from '@rocicorp/rails';
 
-export type ClientState = Entity & {
+export type ClientState = PresenceEntity & {
   cursor: {x: number; y: number} | null;
   userInfo: UserInfo;
 };
@@ -29,7 +29,7 @@ const {
   get: getClientState,
   put: putClientState,
   update: updateClientState,
-} = generate<ClientState>('client-state');
+} = generatePresence<ClientState>('client-state');
 
 function initClientState(tx: WriteTransaction, userInfo: UserInfo) {
   return initImpl(tx, {

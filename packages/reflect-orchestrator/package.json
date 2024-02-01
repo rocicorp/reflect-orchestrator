@@ -25,7 +25,7 @@
   "peerDependencies": {
     "react": ">=16.0 <19.0",
     "react-dom": ">=16.0 <19.0",
-    "@rocicorp/reflect": "^0.39.202401100534"
+    "@rocicorp/reflect": "^0.39.202402011004"
   },
   "peerDependenciesMeta": {
     "react": {
@@ -37,7 +37,7 @@
   },
   "dependencies": {
     "@badrap/valita": "^0.3.0",
-    "@rocicorp/rails": "^0.8.1"
+    "@rocicorp/rails": "^0.10.0"
   },
   "devDependencies": {
     "@rocicorp/eslint-config": "^0.5.1",

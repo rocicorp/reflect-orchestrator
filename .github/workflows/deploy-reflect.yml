@@ -1,15 +1,14 @@
 name: Deploy Reflect
 
 on:
-  push:
-    branches:
-      - main
+  pull_request:
+    branches: [main]
 
 env:
   NODE_VERSION: '18.x'
 
 jobs:
-  deploy:
+  preview:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,16 +19,15 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
-      - name: install
+      - name: npm install
         run: |
           npm install
-
-      - name: build
-        run: |
-          cd packages/reflect-orchestrator && npm run build && cd -
 
       - name: publish
         env:
           REFLECT_AUTH_KEY: ${{ secrets.REFLECT_AUTH_KEY }}
+          REFLECT_APP_NAME: ${{ vars.REFLECT_APP_NAME }}
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
         run: |
-          cd examples/basic && npx reflect publish --auth-key-from-env=REFLECT_AUTH_KEY
+          cd examples/basic
+          npx reflect publish --reflect-channel=canary --app=${REFLECT_APP_NAME}-${BRANCH_NAME//[^a-zA-Z0-9]/-} --auth-key-from-env=REFLECT_AUTH_KEY

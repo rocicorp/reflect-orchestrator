@@ -19,5 +19,5 @@ export function useCount(reflect: Reflect<M> | undefined, key: string) {
 }
 
 export function useClientState(r: Reflect<M>, id: string) {
-  return useSubscribe(r, tx => getClientState(tx, id), null);
+  return useSubscribe(r, tx => getClientState(tx, {id}), null);
 }
