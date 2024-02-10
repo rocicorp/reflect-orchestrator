@@ -2,7 +2,7 @@
 // cursors. It also defines some basic CRUD functions using the
 // @rocicorp/rails helper library.
 
-import type {WriteTransaction} from '@rocicorp/reflect';
+import type {ReadTransaction, WriteTransaction} from '@rocicorp/reflect';
 import {Entity, generate} from '@rocicorp/rails';
 
 export type ClientState = Entity & {
@@ -11,6 +11,7 @@ export type ClientState = Entity & {
 };
 
 export type UserInfo = {
+  id: string;
   name: string;
   avatar: string;
   color: string;
@@ -21,6 +22,7 @@ export {
   getClientState,
   putClientState,
   updateClientState,
+  getUniqueUserIDs,
   getUserInfo,
 };
 
@@ -29,6 +31,7 @@ const {
   get: getClientState,
   put: putClientState,
   update: updateClientState,
+  list: listClientStates,
 } = generate<ClientState>('client-state');
 
 function initClientState(tx: WriteTransaction, userInfo: UserInfo) {
@@ -39,13 +42,19 @@ function initClientState(tx: WriteTransaction, userInfo: UserInfo) {
   });
 }
 
-function getUserInfo(clientNumber: number): UserInfo {
+function getUserInfo(id: string, clientNumber: number): UserInfo {
   const [avatar, name, color] = userInfos[clientNumber % userInfos.length];
   return {
+    id,
     avatar,
     name,
     color,
   };
+}
+
+async function getUniqueUserIDs(tx: ReadTransaction): Promise<string[]> {
+  const clientStates = await listClientStates(tx);
+  return [...new Set(clientStates.map(clientState => clientState.userInfo.id))];
 }
 
 const userInfos = [
